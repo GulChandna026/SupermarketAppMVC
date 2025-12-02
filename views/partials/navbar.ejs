@@ -1,0 +1,49 @@
+<nav class="navbar navbar-expand-sm navbar-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">🛒 Supermarket App</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#collapsibleNavbar">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="collapsibleNavbar">
+      <ul class="navbar-nav ms-auto">
+        <% if (!user) { %>
+          <!-- Not logged in -->
+          <li class="nav-item">
+            <a class="nav-link" href="/register">📝 Register</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/login">🔐 Login</a>
+          </li>
+        <% } else if (user.role === 'admin') { %>
+          <!-- Admin navigation -->
+          <li class="nav-item">
+            <a class="nav-link" href="/inventory">📦 Inventory</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/addProduct">➕ Add Product</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/users">👥 Users</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/logout">🚪 Logout</a>
+          </li>
+        <% } else { %>
+          <!-- Customer navigation -->
+          <li class="nav-item">
+            <a class="nav-link" href="/shopping">🛍️ Shop</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/cart">🛒 Cart</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/order-history">📦 Order History</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/logout">🚪 Logout</a>
+          </li>
+        <% } %>
+      </ul>
+    </div>
+  </div>
+</nav>

@@ -1,5 +1,7 @@
 const Product = require('../models/Product');
 const Cart = require('../models/Cart');
+const Order = require('../models/Order');
+const db = require('../db');
 
 // Get cart
 exports.getCart = (req, res) => {
@@ -92,4 +94,75 @@ exports.getCartTotal = (req, res) => {
         const total = results[0].total || 0;
         res.json({ total: total.toFixed(2) });
     });
+}; 
+
+
+// Checkout - decrease stock and clear cart
+exports.checkout = (req, res) => {
+    const userId = req.session.user.id;
+
+    // Step 1: Get all cart items
+    Cart.getCart(userId, (error, cartItems) => {
+        if (error) {
+            console.error('Error fetching cart:', error);
+            return res.status(500).send('Error during checkout');
+        }
+
+        if (!cartItems || cartItems.length === 0) {
+            return res.render('checkout-success', { message: 'Cart was empty' });
+        }
+
+        // Calculate total
+        const total = cartItems.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+
+        // Step 2: Create order
+        Order.create(userId, total, (orderErr, orderResult) => {
+            if (orderErr) {
+                console.error('Error creating order:', orderErr);
+                return res.status(500).send('Error during checkout');
+            }
+
+            const orderId = orderResult.insertId;
+            const orderItems = cartItems.map(item => ({
+                product_id: item.product_id,
+                product_name: item.productName,
+                quantity: item.quantity,
+                unit_price: item.unit_price
+            }));
+
+            // Step 3: Add items to order
+            Order.addItems(orderId, orderItems, (itemErr) => {
+                if (itemErr) {
+                    console.error('Error adding items to order:', itemErr);
+                    return res.status(500).send('Error during checkout');
+                }
+
+                // Step 4: Decrease stock for each product
+                let completed = 0;
+                cartItems.forEach((item) => {
+                    const sql = 'UPDATE products SET quantity = quantity - ? WHERE id = ?';
+                    db.query(sql, [item.quantity, item.product_id], (err) => {
+                        if (err) {
+                            console.error('Error updating product quantity:', err);
+                            return res.status(500).send('Error during checkout');
+                        }
+
+                        completed++;
+
+                        // Step 5: Once all products updated, clear cart
+                        if (completed === cartItems.length) {
+                            Cart.clearCart(userId, (clearErr) => {
+                                if (clearErr) {
+                                    console.error('Error clearing cart:', clearErr);
+                                    return res.status(500).send('Error clearing cart');
+                                }
+                                res.render('checkout-success', { message: 'Checkout successful! Your order #' + orderId + ' has been placed.' });
+                            });
+                        }
+                    });
+                });
+            });
+        });
+    });
 };
+

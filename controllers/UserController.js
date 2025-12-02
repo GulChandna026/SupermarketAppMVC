@@ -79,3 +79,56 @@ exports.logout = (req, res) => {
         res.redirect('/');
     });
 };
+
+// Get all users (admin)
+exports.getAllUsers = (req, res) => {
+    User.getAll((error, users) => {
+        if (error) {
+            console.error('Error fetching users:', error);
+            return res.status(500).send('Error fetching users');
+        }
+        console.log('All users fetched:', users);
+        res.render('users', { users: users, user: req.session.user });
+    });
+};
+
+// Delete user (admin)
+exports.deleteUser = (req, res) => {
+    const userId = req.params.id;
+    
+    // First check if the user exists and their role
+    User.getById(userId, (error, results) => {
+        if (error) {
+            console.error('Error fetching user:', error);
+            return res.status(500).send('Error deleting user');
+        }
+        
+        if (results.length === 0) {
+            req.flash('error', 'User not found');
+            return res.redirect('/users');
+        }
+        
+        const userToDelete = results[0];
+        
+        // Prevent deleting admins
+        if (userToDelete.role === 'admin') {
+            req.flash('error', 'Cannot delete admin users');
+            return res.redirect('/users');
+        }
+        
+        // Prevent deleting yourself
+        if (userId == req.session.user.id) {
+            req.flash('error', 'Cannot delete your own account');
+            return res.redirect('/users');
+        }
+        
+        User.delete(userId, (error, results) => {
+            if (error) {
+                console.error('Error deleting user:', error);
+                return res.status(500).send('Error deleting user');
+            }
+            req.flash('success', 'User deleted successfully');
+            res.redirect('/users');
+        });
+    });
+};

@@ -6,6 +6,7 @@ const db = require('./db');
 const ProductController = require('./controllers/ProductController');
 const UserController = require('./controllers/UserController');
 const CartController = require('./controllers/CartController');
+const OrderController = require('./controllers/OrderController');
 const app = express();
 
 // Set up multer for file uploads
@@ -119,8 +120,15 @@ app.post('/updateProduct/:id', upload.single('image'), ProductController.updateP
 
 app.get('/deleteProduct/:id', ProductController.deleteProduct);
 
-app.get('/checkout', (req, res) => {res.render('Checkout'); });
+app.post('/checkout', checkAuthenticated, CartController.checkout);
 
+app.get('/order-history', checkAuthenticated, OrderController.getOrderHistory);
+
+app.get('/order-details/:id', checkAuthenticated, OrderController.getOrderDetails);
+
+app.get('/users', checkAuthenticated, checkAdmin, UserController.getAllUsers);
+
+app.get('/delete-user/:id', checkAuthenticated, checkAdmin, UserController.deleteUser);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
