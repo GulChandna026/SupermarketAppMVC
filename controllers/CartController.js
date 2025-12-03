@@ -29,11 +29,19 @@ exports.addToCart = (req, res) => {
 
         if (results.length > 0) {
             const product = results[0];
+            
+            // Check if stock is available
+            if (product.quantity < quantity) {
+                req.flash('error', `Not enough stock! Only ${product.quantity} item(s) available.`);
+                return res.redirect('/shopping');
+            }
+
             Cart.addItem(userId, productId, quantity, product.price, (err, result) => {
                 if (err) {
                     console.error('Error adding to cart:', err);
                     return res.status(500).send('Error adding to cart');
                 }
+                req.flash('success', `${product.productName} added to cart!`);
                 res.redirect('/cart');
             });
         } else {
@@ -62,12 +70,32 @@ exports.updateQuantity = (req, res) => {
     const productId = parseInt(req.params.id);
     const quantity = parseInt(req.body.quantity);
 
-    Cart.updateQuantity(userId, productId, quantity, (error, results) => {
+    // First check if product has enough stock
+    Product.getById(productId, (error, results) => {
         if (error) {
-            console.error('Error updating quantity:', error);
-            return res.status(500).send('Error updating quantity');
+            console.error('Error fetching product:', error);
+            return res.status(500).send('Error fetching product');
         }
-        res.redirect('/cart');
+
+        if (results.length > 0) {
+            const product = results[0];
+            
+            // Check if stock is available for the new quantity
+            if (product.quantity < quantity) {
+                req.flash('error', `Not enough stock! Only ${product.quantity} item(s) available.`);
+                return res.redirect('/cart');
+            }
+
+            Cart.updateQuantity(userId, productId, quantity, (error, results) => {
+                if (error) {
+                    console.error('Error updating quantity:', error);
+                    return res.status(500).send('Error updating quantity');
+                }
+                res.redirect('/cart');
+            });
+        } else {
+            res.status(404).send("Product not found");
+        }
     });
 };
 

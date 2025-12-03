@@ -219,7 +219,7 @@
 
     <!-- Search Section -->
     <div class="search-section">
-      <input type="text" id="searchInput" placeholder="🔍 Search products..." onkeyup="filterProducts()">
+      <input type="text" id="searchInput" placeholder="🔍 Search by first letter (e.g. A)" onkeyup="filterProducts()">
       <button onclick="resetSearch()">Reset</button>
     </div>
 
@@ -262,6 +262,7 @@
           </div>
         <% } %>
       </div>
+      <div id="noResults" class="no-products" style="display:none;"></div>
     <% } else { %>
       <div class="alert alert-info mt-4">
         <p class="mb-0">No products available at the moment.</p>
@@ -275,31 +276,58 @@
   <!-- Search Script -->
   <script>
     function filterProducts() {
-      const searchInput = document.getElementById('searchInput').value.toLowerCase();
+      const rawInput = document.getElementById('searchInput').value.trim().toLowerCase();
       const productCards = document.querySelectorAll('.product-card');
       let visibleCount = 0;
 
-      productCards.forEach(card => {
-        const productName = card.getAttribute('data-product-name');
-        if (productName.includes(searchInput)) {
-          card.style.display = 'block';
-          visibleCount++;
-        } else {
-          card.style.display = 'none';
-        }
-      });
+      // If no input, show all
+      if (!rawInput) {
+        productCards.forEach(card => card.style.display = 'block');
+        return;
+      }
 
-      // Show "no results" message if needed
-      if (visibleCount === 0 && searchInput !== '') {
-        const grid = document.getElementById('productGrid');
-        grid.innerHTML = '<div class="no-products">No products match your search.</div>';
+      // If user typed a single character, match first letter only.
+      // If user typed more than one character, match prefix (startsWith).
+      if (rawInput.length === 1) {
+        const firstChar = rawInput.charAt(0);
+        productCards.forEach(card => {
+          const productName = card.getAttribute('data-product-name');
+          if (productName && productName.charAt(0) === firstChar) {
+            card.style.display = 'block';
+            visibleCount++;
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      } else {
+        // Prefix match for longer queries (so "bro" matches "broccoli" but not "banana")
+        productCards.forEach(card => {
+          const productName = card.getAttribute('data-product-name');
+          if (productName && productName.startsWith(rawInput)) {
+            card.style.display = 'block';
+            visibleCount++;
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      }
+
+      // Show "no results" message if needed (don't overwrite grid DOM)
+      const noEl = document.getElementById('noResults');
+      if (visibleCount === 0) {
+        if (noEl) {
+          noEl.textContent = `No products start with "${firstChar.toUpperCase()}".`;
+          noEl.style.display = 'block';
+        }
+      } else {
+        if (noEl) noEl.style.display = 'none';
       }
     }
 
     function resetSearch() {
       document.getElementById('searchInput').value = '';
       filterProducts();
-      location.reload();
+      // Do not reload; just restore the grid
     }
 
     // Update quantity when select changes
